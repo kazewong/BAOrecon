@@ -3,7 +3,7 @@ from scipy.integrate import quad
 import numpy as np
 import argparse
 def convert(z):
-	return 2997.9245/(np.sqrt(0.3089*np.power(1+z,3)+0.6911))
+	return 299792.45*0.7/((np.sqrt(0.3089*np.power(1+z,3)+0.6911))*67.6)
 
 def coordinateTransform(z,RA,Dec):
 	output = np.array([[0. for i in range(z.size)] for i in range(3)])
