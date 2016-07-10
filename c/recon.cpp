@@ -19,8 +19,8 @@ struct Box {
 };
 
 int N=128;
-double k =2*M_PI/6000;
 struct Box box; 
+double k;
 
 struct particle CreateParticle(const double x, const double y, const double z){
 
@@ -178,17 +178,14 @@ void CICinterpolation(vector<struct particle> &data,const fftw_complex *dx,const
 }
 
 void FirstDisplacement(fftw_complex *delta,fftw_complex *dx,fftw_complex *dy,fftw_complex *dz){
-	fftw_plan xforward,xbackward,yforward,ybackward,zforward,zbackward;
-	xforward = fftw_plan_dft_3d(N,N,N,delta,dx,FFTW_FORWARD,FFTW_ESTIMATE);
-	yforward = fftw_plan_dft_3d(N,N,N,delta,dy,FFTW_FORWARD,FFTW_ESTIMATE);
-	zforward = fftw_plan_dft_3d(N,N,N,delta,dz,FFTW_FORWARD,FFTW_ESTIMATE);
+	fftw_plan forward,backward,xbackward,ybackward,zbackward;
+	forward = fftw_plan_dft_3d(N,N,N,delta,delta,FFTW_FORWARD,FFTW_ESTIMATE);
+	backward = fftw_plan_dft_3d(N,N,N,delta,delta,FFTW_BACKWARD,FFTW_MEASURE);
 	xbackward = fftw_plan_dft_3d(N,N,N,dx,dx,FFTW_BACKWARD,FFTW_MEASURE);
 	ybackward = fftw_plan_dft_3d(N,N,N,dy,dy,FFTW_BACKWARD,FFTW_MEASURE);
 	zbackward = fftw_plan_dft_3d(N,N,N,dz,dz,FFTW_BACKWARD,FFTW_MEASURE);
-	fftw_execute(xforward);
-	fftw_execute(yforward);
-	fftw_execute(zforward);
-#pragma omg parallel for shared(dx,dy,dz)
+	fftw_execute(forward);
+#pragma omg parallel for shared(delta,dx,dy,dz)
 	for (int xin=0;xin<N;xin++){
 	 for (int yin=0;yin<N;yin++){
 	  for (int zin=0;zin<N;zin++){
@@ -198,8 +195,8 @@ void FirstDisplacement(fftw_complex *delta,fftw_complex *dx,fftw_complex *dy,fft
 	  k2 = k*(xin*xin+yin*yin+zin*zin);
 	  if (k2==0){}
 	  else{
-	   im = dx[index][1];
-	   re = dx[index][0];
+	   im = delta[index][1];
+	   re = delta[index][0];
 	   dx[index][0] = (-(double)xin/k2)*im;
 	   dx[index][1] = ((double)xin/k2)*re;
 	   dy[index][0] = (-(double)yin/k2)*im;
@@ -210,6 +207,7 @@ void FirstDisplacement(fftw_complex *delta,fftw_complex *dx,fftw_complex *dy,fft
 	  }
 	 }
 	}
+	fftw_execute(backward);
 	fftw_execute(xbackward);
 	fftw_execute(ybackward);
 	fftw_execute(zbackward);
@@ -322,6 +320,7 @@ int main()
 	vector<struct particle> DataArray=readfile(name1);
 	vector<struct particle> RandomArray=readfile(name2);
 	SetBox(RandomArray);
+	k = 2*M_PI/box.Length;
 	MapPositiontoGrid(DataArray);
 	MapPositiontoGrid(RandomArray);
 	fftw_complex *data,*random,*dx,*dy,*dz;
