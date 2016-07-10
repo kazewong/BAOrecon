@@ -48,11 +48,11 @@ wavenumber = getWavenumber(gridNumber,boxsize)
 print 'The pre-smoothing mean density is'+str(np.mean(dataDensityField))
 print 'Start smoothing density field'
 fft = np.fft.fftn(dataDensityField)
-fft = gaussianFilter(fft,args.s,wavenumber)
+fft = gaussianFilter(fft,float(args.s),wavenumber)
 fft[0][0][0]=0
 print 'The post-smoothing mean density is'+str(np.mean(np.fft.ifftn(fft)))
 print 'start computing Displacement'
-displacementfft = computeDisplacement(fft,wavenumber,boxsize,args.b)
+displacementfft = computeDisplacement(fft,wavenumber,boxsize,float(args.b))
 redshiftDistortion = getRadialFactor(gridNumber,boxsize,boxmin)
 displacementfftCorrected = displacementfft#-args.f*np.linalg.norm(displacementfft*redshiftDistortion,axis=0)*redshiftDistortion/(1+args.f)
 print 'start shifting particles'
