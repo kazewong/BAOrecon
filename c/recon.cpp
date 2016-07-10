@@ -18,7 +18,7 @@ struct Box {
 	double Length;
 };
 
-int N=128;
+int N=256;
 struct Box box; 
 double k;
 
@@ -108,15 +108,18 @@ void Masking(fftw_complex *data,fftw_complex *random){
 	 }
 	mean/=count;
 	cout<<mean<<endl;
+//	double min,max;
 	for (int xin=0;xin<N;xin++){
 	 for (int yin=0;yin<N;yin++){
 	  for (int zin=0;zin<N;zin++){
 	   index = N*N*xin+N*yin+zin;
 	   data[index][0]= (random[index][0]!=0)?(data[index][0]/mean-1):0;
+//	   min = (min<data[index][0])?min:data[index][0];
+//	   max = (max>data[index][0])?max:data[index][0];
 	   }
 	  }
 	 }
-
+//	cout<<min<<" "<<max<<endl;
 }
 
 void CICassignment(const vector<struct particle> data,fftw_complex *grid){
@@ -175,16 +178,20 @@ void CICinterpolation(vector<struct particle> &data,const fftw_complex *dx,const
 		data[i].pos[2]-=pz*N/box.Length;
 		sum+=px*px+py*py+pz*pz;
 	}
+	cout<<sqrt(sum/(3*data.size()))<<endl;
 }
 
 void FirstDisplacement(fftw_complex *delta,fftw_complex *dx,fftw_complex *dy,fftw_complex *dz){
-	fftw_plan forward,backward,xbackward,ybackward,zbackward;
-	forward = fftw_plan_dft_3d(N,N,N,delta,delta,FFTW_FORWARD,FFTW_ESTIMATE);
-	backward = fftw_plan_dft_3d(N,N,N,delta,delta,FFTW_BACKWARD,FFTW_MEASURE);
+	fftw_plan xforward,xbackward,yforward,ybackward,zforward,zbackward;
+	xforward = fftw_plan_dft_3d(N,N,N,delta,dx,FFTW_FORWARD,FFTW_ESTIMATE);
+	yforward = fftw_plan_dft_3d(N,N,N,delta,dy,FFTW_FORWARD,FFTW_ESTIMATE);
+	zforward = fftw_plan_dft_3d(N,N,N,delta,dz,FFTW_FORWARD,FFTW_ESTIMATE);
 	xbackward = fftw_plan_dft_3d(N,N,N,dx,dx,FFTW_BACKWARD,FFTW_MEASURE);
 	ybackward = fftw_plan_dft_3d(N,N,N,dy,dy,FFTW_BACKWARD,FFTW_MEASURE);
 	zbackward = fftw_plan_dft_3d(N,N,N,dz,dz,FFTW_BACKWARD,FFTW_MEASURE);
-	fftw_execute(forward);
+	fftw_execute(xforward);
+	fftw_execute(yforward);
+	fftw_execute(zforward);
 #pragma omg parallel for shared(delta,dx,dy,dz)
 	for (int xin=0;xin<N;xin++){
 	 for (int yin=0;yin<N;yin++){
@@ -195,8 +202,8 @@ void FirstDisplacement(fftw_complex *delta,fftw_complex *dx,fftw_complex *dy,fft
 	  k2 = k*(xin*xin+yin*yin+zin*zin);
 	  if (k2==0){}
 	  else{
-	   im = delta[index][1];
-	   re = delta[index][0];
+	   im = dx[index][1];
+	   re = dx[index][0];
 	   dx[index][0] = (-(double)xin/k2)*im;
 	   dx[index][1] = ((double)xin/k2)*re;
 	   dy[index][0] = (-(double)yin/k2)*im;
@@ -207,13 +214,27 @@ void FirstDisplacement(fftw_complex *delta,fftw_complex *dx,fftw_complex *dy,fft
 	  }
 	 }
 	}
-	fftw_execute(backward);
+	cout<<delta[0]<<endl;
 	fftw_execute(xbackward);
 	fftw_execute(ybackward);
 	fftw_execute(zbackward);
-	for (int i =0;i<(N*N*N);i++){dx[i][0]/=(N*N*N);dx[i][1]/=(N*N*N);}
-	for (int i =0;i<(N*N*N);i++){dy[i][0]/=(N*N*N);dy[i][1]/=(N*N*N);}
-	for (int i =0;i<(N*N*N);i++){dz[i][0]/=(N*N*N);dz[i][1]/=(N*N*N);}
+//	double xmax,xmin,ymax,ymin,zmax,zmin;
+	for (int i =0;i<(N*N*N);i++){
+	dx[i][0]/=(N*N*N);
+	dx[i][1]/=(N*N*N);
+	dy[i][0]/=(N*N*N);
+	dy[i][1]/=(N*N*N);
+	dz[i][0]/=(N*N*N);
+	dz[i][1]/=(N*N*N);
+}
+/*	xmin = (xmin<dx[i][0])?xmin:dx[i][0];
+	xmax = (xmax>dx[i][0])?xmax:dx[i][0];
+	ymin = (ymin<dy[i][0])?ymin:dy[i][0];
+	ymax = (ymax>dy[i][0])?ymax:dy[i][0];
+	zmin = (zmin<dz[i][0])?zmin:dz[i][0];
+	zmax = (zmax>dz[i][0])?zmax:dz[i][0];
+	}
+	cout<<xmin<<" "<<xmax<<" "<<ymin<<" "<<ymax<<" "<<zmin<<" "<<zmax<<endl;*/
 }
 
 void SH2(fftw_complex result,double x,double y,double z,int m){
