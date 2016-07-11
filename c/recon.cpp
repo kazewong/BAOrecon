@@ -6,6 +6,7 @@
 #include	<sstream>
 #include	<iomanip>
 #include	<omp.h>
+#include	<gsl/gsl_histogram.h>
 
 using namespace std;
 
@@ -107,7 +108,7 @@ void Masking(fftw_complex *data,fftw_complex *random){
 	  }
 	 }
 	mean/=count;
-	cout<<mean<<endl;
+//	cout<<mean<<endl;
 //	double min,max;
 	for (int xin=0;xin<N;xin++){
 	 for (int yin=0;yin<N;yin++){
@@ -125,59 +126,66 @@ void Masking(fftw_complex *data,fftw_complex *random){
 void CICassignment(const vector<struct particle> data,fftw_complex *grid){
 #pragma omp parallel for shared(grid)
 	for (int i=0;i<data.size();i++){
-		int index[3];
+		int index[6];
 		float difference[3];
-		index[0]=data[i].pos[0];difference[0]=data[i].pos[0]-index[0];
-		index[1]=data[i].pos[1];difference[1]=data[i].pos[1]-index[1];
-		index[2]=data[i].pos[2];difference[2]=data[i].pos[2]-index[2];
+		index[0]=data[i].pos[0];index[3]=(index[0]+1)%N;difference[0]=data[i].pos[0]-index[0];
+		index[1]=data[i].pos[1];index[4]=(index[1]+1)%N;difference[1]=data[i].pos[1]-index[1];
+		index[2]=data[i].pos[2];index[5]=(index[2]+1)%N;difference[2]=data[i].pos[2]-index[2];
 		grid[(N*N*index[0]+N*index[1]+index[2])][0] += (1.0-difference[0])*(1.0-difference[1])*(1.0-difference[2]);
-		grid[(N*N*(index[0]+1)+N*index[1]+index[2])][0] += difference[0]*(1.0-difference[1])*(1.0-difference[2]);
-		grid[(N*N*index[0]+N*(index[1]+1)+index[2])][0] += (1.0-difference[0])*difference[1]*(1.0-difference[2]);
-		grid[(N*N*index[0]+N*index[1]+(index[2]+1))][0] += (1.0-difference[0])*(1.0-difference[1])*difference[2];
-		grid[(N*N*(index[0]+1)+N*(index[1]+1)+index[2])][0] += difference[0]*difference[1]*(1.0-difference[2]);
-		grid[(N*N*(index[0]+1)+N*index[1]+(index[2]+1))][0] += difference[0]*(1.0-difference[1])*difference[2];
-		grid[(N*N*index[0]+N*(index[1]+1)+(index[2]+1))][0] += (1.0-difference[0])*difference[1]*difference[2];
-		grid[(N*N*(index[0]+1)+N*(index[1]+1)+(index[2]+1))][0] += difference[0]*difference[1]*difference[2];
+		grid[(N*N*index[3]+N*index[1]+index[2])][0] += difference[0]*(1.0-difference[1])*(1.0-difference[2]);
+		grid[(N*N*index[0]+N*index[4]+index[2])][0] += (1.0-difference[0])*difference[1]*(1.0-difference[2]);
+		grid[(N*N*index[0]+N*index[1]+index[5])][0] += (1.0-difference[0])*(1.0-difference[1])*difference[2];
+		grid[(N*N*index[3]+N*index[4]+index[2])][0] += difference[0]*difference[1]*(1.0-difference[2]);
+		grid[(N*N*index[3]+N*index[1]+index[5])][0] += difference[0]*(1.0-difference[1])*difference[2];
+		grid[(N*N*index[0]+N*index[4]+index[5])][0] += (1.0-difference[0])*difference[1]*difference[2];
+		grid[(N*N*index[3]+N*index[4]+index[5])][0] += difference[0]*difference[1]*difference[2];
 	}
 }
 
 void CICinterpolation(vector<struct particle> &data,const fftw_complex *dx,const fftw_complex *dy,const fftw_complex *dz){
 	double px,py,pz,sum;
-	int index[3];
+//	gsl_histogram *h = gsl_histogram_alloc(256);
+//	gsl_histogram_set_ranges_uniform(h,0,N);
+	int index[6];
 	float difference[3];
 	for (int i=0;i<data.size();i++){
-		index[0]=data[i].pos[0];difference[0]=data[i].pos[0]-index[0];
-		index[1]=data[i].pos[1];difference[1]=data[i].pos[1]-index[1];
-		index[2]=data[i].pos[2];difference[2]=data[i].pos[2]-index[2];
+		index[0]=data[i].pos[0];index[3]=(index[0]+1)%N;difference[0]=data[i].pos[0]-index[0];
+		index[1]=data[i].pos[1];index[4]=(index[1]+1)%N;difference[1]=data[i].pos[1]-index[1];
+		index[2]=data[i].pos[2];index[5]=(index[2]+1)%N;difference[2]=data[i].pos[2]-index[2];
 		px=dx[(N*N*index[0]+N*index[1]+index[2])][0]*(1.0-difference[0])*(1.0-difference[1])*(1.0-difference[2]);
 		py=dy[(N*N*index[0]+N*index[1]+index[2])][0]*(1.0-difference[0])*(1.0-difference[1])*(1.0-difference[2]);
 		pz=dz[(N*N*index[0]+N*index[1]+index[2])][0]*(1.0-difference[0])*(1.0-difference[1])*(1.0-difference[2]);
-		px+=dx[(N*N*(index[0]+1)+N*index[1]+index[2])][0]*difference[0]*(1.0-difference[1])*(1.0-difference[2]);
-		py+=dy[(N*N*(index[0]+1)+N*index[1]+index[2])][0]*difference[0]*(1.0-difference[1])*(1.0-difference[2]);
-		pz+=dz[(N*N*(index[0]+1)+N*index[1]+index[2])][0]*difference[0]*(1.0-difference[1])*(1.0-difference[2]);
-		px+=dx[(N*N*index[0]+N*(index[1]+1)+index[2])][0]*(1.0-difference[0])*difference[1]*(1.0-difference[2]);
-		py+=dy[(N*N*index[0]+N*(index[1]+1)+index[2])][0]*(1.0-difference[0])*difference[1]*(1.0-difference[2]);
-		pz+=dz[(N*N*index[0]+N*(index[1]+1)+index[2])][0]*(1.0-difference[0])*difference[1]*(1.0-difference[2]);
-		px+=dx[(N*N*index[0]+N*index[1]+(index[2]+1))][0]*(1.0-difference[0])*(1.0-difference[1])*difference[2];
-		py+=dy[(N*N*index[0]+N*index[1]+(index[2]+1))][0]*(1.0-difference[0])*(1.0-difference[1])*difference[2];
-		pz+=dz[(N*N*index[0]+N*index[1]+(index[2]+1))][0]*(1.0-difference[0])*(1.0-difference[1])*difference[2];
-		px+=dx[(N*N*(index[0]+1)+N*(index[1]+1)+index[2])][0]*difference[0]*difference[1]*(1.0-difference[2]);
-		py+=dy[(N*N*(index[0]+1)+N*(index[1]+1)+index[2])][0]*difference[0]*difference[1]*(1.0-difference[2]);
-		pz+=dz[(N*N*(index[0]+1)+N*(index[1]+1)+index[2])][0]*difference[0]*difference[1]*(1.0-difference[2]);
-		px+=dx[(N*N*(index[0]+1)+N*index[1]+(index[2]+1))][0]*difference[0]*(1.0-difference[1])*difference[2];
-		py+=dy[(N*N*(index[0]+1)+N*index[1]+(index[2]+1))][0]*difference[0]*(1.0-difference[1])*difference[2];
-		pz+=dz[(N*N*(index[0]+1)+N*index[1]+(index[2]+1))][0]*difference[0]*(1.0-difference[1])*difference[2];
-		px+=dx[(N*N*index[0]+N*(index[1]+1)+(index[2]+1))][0]*(1.0-difference[0])*difference[1]*difference[2];
-		py+=dy[(N*N*index[0]+N*(index[1]+1)+(index[2]+1))][0]*(1.0-difference[0])*difference[1]*difference[2];
-		pz+=dz[(N*N*index[0]+N*(index[1]+1)+(index[2]+1))][0]*(1.0-difference[0])*difference[1]*difference[2];
-		px+=dx[(N*N*(index[0]+1)+N*(index[1]+1)+(index[2]+1))][0]*difference[0]*difference[1]*difference[2];
-		py+=dy[(N*N*(index[0]+1)+N*(index[1]+1)+(index[2]+1))][0]*difference[0]*difference[1]*difference[2];
-		pz+=dz[(N*N*(index[0]+1)+N*(index[1]+1)+(index[2]+1))][0]*difference[0]*difference[1]*difference[2];
+		px+=dx[(N*N*index[3]+N*index[1]+index[2])][0]*difference[0]*(1.0-difference[1])*(1.0-difference[2]);
+		py+=dy[(N*N*index[3]+N*index[1]+index[2])][0]*difference[0]*(1.0-difference[1])*(1.0-difference[2]);
+		pz+=dz[(N*N*index[3]+N*index[1]+index[2])][0]*difference[0]*(1.0-difference[1])*(1.0-difference[2]);
+		px+=dx[(N*N*index[0]+N*index[4]+index[2])][0]*(1.0-difference[0])*difference[1]*(1.0-difference[2]);
+		py+=dy[(N*N*index[0]+N*index[4]+index[2])][0]*(1.0-difference[0])*difference[1]*(1.0-difference[2]);
+		pz+=dz[(N*N*index[0]+N*index[4]+index[2])][0]*(1.0-difference[0])*difference[1]*(1.0-difference[2]);
+		px+=dx[(N*N*index[0]+N*index[1]+index[5])][0]*(1.0-difference[0])*(1.0-difference[1])*difference[2];
+		py+=dy[(N*N*index[0]+N*index[1]+index[5])][0]*(1.0-difference[0])*(1.0-difference[1])*difference[2];
+		pz+=dz[(N*N*index[0]+N*index[1]+index[5])][0]*(1.0-difference[0])*(1.0-difference[1])*difference[2];
+		px+=dx[(N*N*index[3]+N*index[4]+index[2])][0]*difference[0]*difference[1]*(1.0-difference[2]);
+		py+=dy[(N*N*index[3]+N*index[4]+index[2])][0]*difference[0]*difference[1]*(1.0-difference[2]);
+		pz+=dz[(N*N*index[3]+N*index[4]+index[2])][0]*difference[0]*difference[1]*(1.0-difference[2]);
+		px+=dx[(N*N*index[3]+N*index[1]+index[5])][0]*difference[0]*(1.0-difference[1])*difference[2];
+		py+=dy[(N*N*index[3]+N*index[1]+index[5])][0]*difference[0]*(1.0-difference[1])*difference[2];
+		pz+=dz[(N*N*index[3]+N*index[1]+index[5])][0]*difference[0]*(1.0-difference[1])*difference[2];
+		px+=dx[(N*N*index[0]+N*index[4]+index[5])][0]*(1.0-difference[0])*difference[1]*difference[2];
+		py+=dy[(N*N*index[0]+N*index[4]+index[5])][0]*(1.0-difference[0])*difference[1]*difference[2];
+		pz+=dz[(N*N*index[0]+N*index[4]+index[5])][0]*(1.0-difference[0])*difference[1]*difference[2];
+		px+=dx[(N*N*index[3]+N*index[4]+index[5])][0]*difference[0]*difference[1]*difference[2];
+		py+=dy[(N*N*index[3]+N*index[4]+index[5])][0]*difference[0]*difference[1]*difference[2];
+		pz+=dz[(N*N*index[3]+N*index[4]+index[5])][0]*difference[0]*difference[1]*difference[2];
+//		px = dx[N*N*index[0]+N*index[1]*index[2]][0];
 		data[i].pos[0]-=px*N/box.Length;
 		data[i].pos[1]-=py*N/box.Length;
 		data[i].pos[2]-=pz*N/box.Length;
 		sum+=px*px+py*py+pz*pz;
+//		gsl_histogram_accumulate(h,data[i].pos[0],1);
 	}
+
+//	gsl_histogram_fprintf(stdout,h,"%g","%g");
+
 	cout<<sqrt(sum/(3*data.size()))<<endl;
 }
 
@@ -194,31 +202,34 @@ void FirstDisplacement(fftw_complex *delta,fftw_complex *dx,fftw_complex *dy,fft
 	fftw_execute(zforward);
 #pragma omg parallel for shared(delta,dx,dy,dz)
 	for (int xin=0;xin<N;xin++){
+	double x = (xin<N/2)?xin:xin-N;
 	 for (int yin=0;yin<N;yin++){
+ 	 double y = (yin<N/2)?yin:yin-N;
 	  for (int zin=0;zin<N;zin++){
+  	  double z = (zin<N/2)?zin:zin-N;
 	  int index;
 	  double k2,im,re;
 	  index = N*N*xin+N*yin+zin;
-	  k2 = k*(xin*xin+yin*yin+zin*zin);
+	  k2 = k*(x*x+y*y+z*z);
 	  if (k2==0){}
 	  else{
 	   im = dx[index][1];
 	   re = dx[index][0];
-	   dx[index][0] = (-(double)xin/k2)*im;
-	   dx[index][1] = ((double)xin/k2)*re;
-	   dy[index][0] = (-(double)yin/k2)*im;
-	   dy[index][1] = ((double)yin/k2)*re;
-	   dz[index][0] = (-(double)zin/k2)*im;
-	   dz[index][1] = ((double)zin/k2)*re;
+	   dx[index][0] = (-(double)x/k2)*im;
+	   dx[index][1] = ((double)x/k2)*re;
+	   dy[index][0] = (-(double)y/k2)*im;
+	   dy[index][1] = ((double)y/k2)*re;
+	   dz[index][0] = (-(double)z/k2)*im;
+	   dz[index][1] = ((double)z/k2)*re;
 	   }
 	  }
 	 }
 	}
-	cout<<delta[0]<<endl;
+//	cout<<delta[0]<<endl;
 	fftw_execute(xbackward);
 	fftw_execute(ybackward);
 	fftw_execute(zbackward);
-//	double xmax,xmin,ymax,ymin,zmax,zmin;
+	double xmax,xmin,ymax,ymin,zmax,zmin;
 	for (int i =0;i<(N*N*N);i++){
 	dx[i][0]/=(N*N*N);
 	dx[i][1]/=(N*N*N);
@@ -226,15 +237,66 @@ void FirstDisplacement(fftw_complex *delta,fftw_complex *dx,fftw_complex *dy,fft
 	dy[i][1]/=(N*N*N);
 	dz[i][0]/=(N*N*N);
 	dz[i][1]/=(N*N*N);
-}
-/*	xmin = (xmin<dx[i][0])?xmin:dx[i][0];
+	xmin = (xmin<dx[i][0])?xmin:dx[i][0];
 	xmax = (xmax>dx[i][0])?xmax:dx[i][0];
 	ymin = (ymin<dy[i][0])?ymin:dy[i][0];
 	ymax = (ymax>dy[i][0])?ymax:dy[i][0];
 	zmin = (zmin<dz[i][0])?zmin:dz[i][0];
 	zmax = (zmax>dz[i][0])?zmax:dz[i][0];
 	}
-	cout<<xmin<<" "<<xmax<<" "<<ymin<<" "<<ymax<<" "<<zmin<<" "<<zmax<<endl;*/
+	cout<<xmin<<" "<<xmax<<" "<<ymin<<" "<<ymax<<" "<<zmin<<" "<<zmax<<endl;
+/*	gsl_histogram *h = gsl_histogram_alloc(256);
+	gsl_histogram_set_ranges_uniform(h,0,N);
+	for (int i=0;i<N;i++){
+	for (int j=0;j<N;j++){
+	for (int k=0;k<N;k++){
+		gsl_histogram_accumulate(h,i,dx[N*N*i+N*j+k][0]);
+	}}}
+	gsl_histogram_fprintf(stdout,h,"%g","%g");*/
+}
+
+int main()
+{
+	string name1="data_raw.xyzw",name2="rand_raw.xyzw";
+	string outname="datarec.dat",outname2="randrec.dat";
+	vector<struct particle> DataArray=readfile(name1);
+	vector<struct particle> RandomArray=readfile(name1);
+	SetBox(RandomArray);
+	k = 2*M_PI/box.Length;
+//	gsl_histogram *h = gsl_histogram_alloc(256);
+	MapPositiontoGrid(DataArray);
+	MapPositiontoGrid(RandomArray);
+	fftw_complex *data,*random,*dx,*dy,*dz;
+	data =(fftw_complex*) fftw_malloc(N*N*N*sizeof(fftw_complex));
+	random =(fftw_complex*) fftw_malloc(N*N*N*sizeof(fftw_complex));
+	dx =(fftw_complex*) fftw_malloc(N*N*N*sizeof(fftw_complex));
+	dy =(fftw_complex*) fftw_malloc(N*N*N*sizeof(fftw_complex));
+	dz =(fftw_complex*) fftw_malloc(N*N*N*sizeof(fftw_complex));
+	CICassignment(DataArray,data);
+	CICassignment(RandomArray,random);	
+	Masking(data,random);
+/*	gsl_histogram_set_ranges_uniform(h,0,N);
+	for (int i=0;i<N;i++){
+	for (int j=0;j<N;j++){
+	for (int k=0;k<N;k++){
+		gsl_histogram_accumulate(h,i,data[N*N*i+N*j+k][0]);
+	}}}
+	gsl_histogram_fprintf(stdout,h,"%g","%g");*/
+	FirstDisplacement(data,dx,dy,dz);
+//	SecondDisplacement(data,dx,dy,dz);
+	CICinterpolation(DataArray,dx,dy,dz);
+	CICinterpolation(RandomArray,dx,dy,dz);
+	MapGridtoPosition(DataArray);
+	MapGridtoPosition(RandomArray);
+/*	gsl_histogram_set_ranges_uniform(h,box.position[1]-(box.Length/2),box.position[1]+(box.Length/2));
+	for (int i=0;i<DataArray.size();i++){
+		gsl_histogram_increment(h,DataArray[i].pos[1]);
+	}
+	gsl_histogram_fprintf(stdout,h,"%g","%g");*/
+	WriteFile(DataArray,outname);
+	WriteFile(RandomArray,outname2);
+
+	return 0;
 }
 
 void SH2(fftw_complex result,double x,double y,double z,int m){
@@ -334,32 +396,4 @@ void SecondDisplacement(fftw_complex *delta, fftw_complex *dx, fftw_complex *dy,
 
 }
 
-int main()
-{
-	string name1="data_raw.xyzw",name2="rand_raw.xyzw";
-	string outname="datarec.dat",outname2="randrec.dat";
-	vector<struct particle> DataArray=readfile(name1);
-	vector<struct particle> RandomArray=readfile(name2);
-	SetBox(RandomArray);
-	k = 2*M_PI/box.Length;
-	MapPositiontoGrid(DataArray);
-	MapPositiontoGrid(RandomArray);
-	fftw_complex *data,*random,*dx,*dy,*dz;
-	data =(fftw_complex*) fftw_malloc(N*N*N*sizeof(fftw_complex));
-	random =(fftw_complex*) fftw_malloc(N*N*N*sizeof(fftw_complex));
-	dx =(fftw_complex*) fftw_malloc(N*N*N*sizeof(fftw_complex));
-	dy =(fftw_complex*) fftw_malloc(N*N*N*sizeof(fftw_complex));
-	dz =(fftw_complex*) fftw_malloc(N*N*N*sizeof(fftw_complex));
-	CICassignment(DataArray,data);	
-	CICassignment(RandomArray,random);	
-	Masking(data,random);
-	FirstDisplacement(data,dx,dy,dz);
-//	SecondDisplacement(data,dx,dy,dz);
-	CICinterpolation(DataArray,dx,dy,dz);
-	CICinterpolation(RandomArray,dx,dy,dz);
-	MapGridtoPosition(DataArray);
-	MapGridtoPosition(RandomArray);
-	WriteFile(DataArray,outname);
-	WriteFile(RandomArray,outname2);
-	return 0;
-}
+
