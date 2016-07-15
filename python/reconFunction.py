@@ -51,6 +51,8 @@ def shiftParticle(original,displacement,gridNumber,boxsize,boxmin):
 	xinterp = interpolate.interpn(boxGrid,displacement[0],new.T,bounds_error=False,fill_value = 0).real
 	yinterp = interpolate.interpn(boxGrid,displacement[1],new.T,bounds_error=False,fill_value = 0).real
 	zinterp = interpolate.interpn(boxGrid,displacement[2],new.T,bounds_error=False,fill_value = 0).real
+	print 'The rms displacement is'
+	print np.sqrt(np.sum(xinterp*xinterp+yinterp*yinterp+zinterp*zinterp)/(3*xinterp.size()))
 	print 'The first 10 interpolated value of x displacement is'
 	print new[0].min(),new[0].max(),new[1].min(),new[1].max(),new[2].min(),new[2].max(),xinterp.max(),yinterp.max(),zinterp.max(),xinterp.min(),yinterp.min(),zinterp.min()
 	new[0] = (new[0])*(boxsize)/(gridNumber-1)+boxmin+xinterp
@@ -210,6 +212,4 @@ def computeDisplacement(densityField,wavenumber,boxsize,bias):
 	displacementField = np.array(displacementField)
 	print 'The minmax disaplcement is'
 	print displacementField.min(),displacementField.max()
-	print 'The rms displacement is'
-	print np.sqrt(np.mean(displacementField*displacementField))
 	return np.array(displacementField)

@@ -19,7 +19,7 @@ struct Box {
 	double Length;
 };
 
-int N=256;
+int N=512;
 struct Box box; 
 double k;
 
@@ -49,7 +49,7 @@ void SetBox(vector<struct particle> &input){
 	 min = (min<minmax[i][0])?min:minmax[i][0];
 	 max = (max>minmax[i][1])?max:minmax[i][1];
 	}
-	box.Length = max-min;
+	box.Length = (max-min)*1.1;
 	
 }
 
@@ -100,7 +100,7 @@ void Masking(fftw_complex *data,fftw_complex *random){
 	 for (int yin=0;yin<N;yin++){
 	  for (int zin=0;zin<N;zin++){
 	   index = N*N*xin+N*yin+zin;
-	   if (random[index][0]>0 && random[index][0] < 0.75){
+	   if (random[index][0]>0 && random[index][0] < 0.5){
 	   random[index][0]=data[index][0]=0;
 	   count2 ++;
 	   }
@@ -146,10 +146,11 @@ void CICassignment(const vector<struct particle> data,fftw_complex *grid){
 }
 
 void CICinterpolation(vector<struct particle> &data,const fftw_complex *dx,const fftw_complex *dy,const fftw_complex *dz){
+	double xmax,xmin,ymax,ymin,zmax,zmin;
 	double px,py,pz,sum;
 	sum=0;
-	gsl_histogram *h = gsl_histogram_alloc(256);
-	gsl_histogram_set_ranges_uniform(h,0,N);
+//	gsl_histogram *h = gsl_histogram_alloc(256);
+//	gsl_histogram_set_ranges_uniform(h,0,N);
 	int index[6];
 	float difference[3];
 	for (int i=0;i<data.size();i++){
@@ -186,10 +187,19 @@ void CICinterpolation(vector<struct particle> &data,const fftw_complex *dx,const
 		data[i].pos[1]-=py*N/box.Length;
 		data[i].pos[2]-=pz*N/box.Length;
 		sum+=px*px+py*py+pz*pz;
-		gsl_histogram_accumulate(h,data[i].pos[0],px);
+		xmin = (xmin<px)?xmin:px;
+		xmax = (xmax>px)?xmax:px;
+		ymin = (ymin<py)?ymin:py;
+		ymax = (ymax>py)?ymax:py;
+		zmin = (zmin<pz)?zmin:pz;
+		zmax = (zmax>pz)?zmax:pz;
+
+//		gsl_histogram_accumulate(h,data[i].pos[0],px);
 	}
 
-	gsl_histogram_fprintf(stdout,h,"%g","%g");
+//	gsl_histogram_fprintf(stdout,h,"%g","%g");
+
+	cout<<"#"<<xmin<<" "<<xmax<<" "<<ymin<<" "<<ymax<<" "<<zmin<<" "<<zmax<<endl;
 
 	cout<<"#"<<sqrt(sum/(3*data.size()))<<endl;
 }
@@ -211,7 +221,7 @@ void FirstDisplacement(fftw_complex *delta,fftw_complex *dx,fftw_complex *dy,fft
 	 for (int yin=0;yin<N;yin++){
  	 double y = (yin<N/2)?yin:yin-N;
 	  for (int zin=0;zin<N;zin++){
-  	  double z = (zin<N/2)?zin:zin-N;
+ 	  double z = (zin<N/2)?zin:zin-N;
 	  int index;
 	  double k2,im,re;
 	  index = N*N*xin+N*yin+zin;
@@ -250,14 +260,14 @@ void FirstDisplacement(fftw_complex *delta,fftw_complex *dx,fftw_complex *dy,fft
 	zmax = (zmax>dz[i][0])?zmax:dz[i][0];
 	}
 	cout<<"#"<<xmin<<" "<<xmax<<" "<<ymin<<" "<<ymax<<" "<<zmin<<" "<<zmax<<endl;
-	gsl_histogram *h = gsl_histogram_alloc(256);
+/*	gsl_histogram *h = gsl_histogram_alloc(256);
 	gsl_histogram_set_ranges_uniform(h,0,N);
 	for (int i=0;i<N;i++){
 	for (int j=0;j<N;j++){
 	for (int k=0;k<N;k++){
 		gsl_histogram_accumulate(h,i,dx[N*N*i+N*j+k][0]);
 	}}}
-	gsl_histogram_fprintf(stdout,h,"%g","%g");
+	gsl_histogram_fprintf(stdout,h,"%g","%g");*/
 }
 
 int main()
@@ -268,7 +278,7 @@ int main()
 	vector<struct particle> RandomArray=readfile(name2);
 	SetBox(RandomArray);
 	k = 2*M_PI/box.Length;
-	gsl_histogram *h = gsl_histogram_alloc(256);
+//	gsl_histogram *h = gsl_histogram_alloc(256);
 	MapPositiontoGrid(DataArray);
 	MapPositiontoGrid(RandomArray);
 	fftw_complex *data,*random,*dx,*dy,*dz;
@@ -280,26 +290,26 @@ int main()
 	CICassignment(DataArray,data);
 	CICassignment(RandomArray,random);	
 	Masking(data,random);
-	gsl_histogram_set_ranges_uniform(h,0,N);
+/*	gsl_histogram_set_ranges_uniform(h,0,N);
 	for (int i=0;i<N;i++){
 	for (int j=0;j<N;j++){
 	for (int k=0;k<N;k++){
 		gsl_histogram_accumulate(h,i,data[N*N*i+N*j+k][0]);
 	}}}
-	gsl_histogram_fprintf(stdout,h,"%g","%g");
+	gsl_histogram_fprintf(stdout,h,"%g","%g");*/
 	FirstDisplacement(data,dx,dy,dz);
 //	SecondDisplacement(data,dx,dy,dz);
 	CICinterpolation(DataArray,dx,dy,dz);
 	CICinterpolation(RandomArray,dx,dy,dz);
 	MapGridtoPosition(DataArray);
 	MapGridtoPosition(RandomArray);
-	gsl_histogram_set_ranges_uniform(h,box.position[0]-(box.Length/2),box.position[0]+(box.Length/2));
+/*	gsl_histogram_set_ranges_uniform(h,box.position[0]-(box.Length/2),box.position[0]+(box.Length/2));
 	for (int i=0;i<DataArray.size();i++){
 		gsl_histogram_increment(h,DataArray[i].pos[0]);
 	}
-	gsl_histogram_fprintf(stdout,h,"%g","%g");
-//	WriteFile(DataArray,outname);
-//	WriteFile(RandomArray,outname2);
+	gsl_histogram_fprintf(stdout,h,"%g","%g");*/
+	WriteFile(DataArray,outname);
+	WriteFile(RandomArray,outname2);
 
 	return 0;
 }
