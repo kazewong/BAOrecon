@@ -41,18 +41,34 @@ boxsize = randomCart.max()-boxmin
 print 'The boxsize is '+str(boxsize)
 print 'Start computing densityfield'
 dataDensityField = computeDensityField(dataCart,dataDensity,gridNumber,boxsize,boxmin)
+print 'The maximum of density field is ' + str(dataDensityField.max())
 randomDensityField = computeDensityField(randomCart,randomDensity,gridNumber,boxsize,boxmin)
+print 'The minimum of density field is ' + str(randomDensityField.max())
 print 'Start masking densityField'
 dataDensityField = maskDensityField(dataDensityField,randomDensityField)
+np.savetxt('density1.dat',np.sum(dataDensityField.real,axis=(0,1)))
+np.savetxt('density2.dat',np.sum(dataDensityField.real,axis=(1,2)))
+np.savetxt('density3.dat',np.sum(dataDensityField.real,axis=(0,2)))
+
+print 'The maximum of overdensity field is ' + str(dataDensityField.max())	
 wavenumber = getWavenumber(gridNumber,boxsize)
 print 'The pre-smoothing mean density is'+str(np.mean(dataDensityField))
 print 'Start smoothing density field'
 fft = np.fft.fftn(dataDensityField)
-fft = gaussianFilter(fft,float(args.s),wavenumber)
-fft[0][0][0]=0
+#fft = gaussianFilter(fft,float(args.s),wavenumber)
+#fft[0][0][0]=0
 print 'The post-smoothing mean density is'+str(np.mean(np.fft.ifftn(fft)))
 print 'start computing Displacement'
 displacementfft = computeDisplacement(fft,wavenumber,boxsize,float(args.b))
+np.savetxt('dx1.dat',np.sum(displacementfft[0].real,axis=(0,1)))
+np.savetxt('dy1.dat',np.sum(displacementfft[1].real,axis=(0,1)))
+np.savetxt('dz1.dat',np.sum(displacementfft[2].real,axis=(0,1)))
+np.savetxt('dx2.dat',np.sum(displacementfft[0].real,axis=(0,2)))
+np.savetxt('dy2.dat',np.sum(displacementfft[1].real,axis=(0,2)))
+np.savetxt('dz2.dat',np.sum(displacementfft[2].real,axis=(0,2)))
+np.savetxt('dx3.dat',np.sum(displacementfft[0].real,axis=(1,2)))
+np.savetxt('dy3.dat',np.sum(displacementfft[1].real,axis=(1,2)))
+np.savetxt('dz3.dat',np.sum(displacementfft[2].real,axis=(1,2)))
 redshiftDistortion = getRadialFactor(gridNumber,boxsize,boxmin)
 displacementfftCorrected = displacementfft#-args.f*np.linalg.norm(displacementfft*redshiftDistortion,axis=0)*redshiftDistortion/(1+args.f)
 print 'start shifting particles'
